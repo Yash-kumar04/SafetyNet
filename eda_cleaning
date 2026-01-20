@@ -1,0 +1,54 @@
+import pandas as pd
+import nltk
+import re
+import matplotlib.pyplot as plt
+import seaborn as sns
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
+
+
+nltk.download('stopwords')
+
+
+
+df = pd.read_csv('../data/toxic_comments.csv')
+
+
+df = df.dropna()
+
+# (I) Clean the Dataset
+def clean_text(text):
+    # Check if text is a string (handles NaN cases if any remain)
+    if not isinstance(text, str):
+        return ""
+    # Remove special chars & lowercase
+    text = re.sub(r'[^a-zA-Z]', ' ', text).lower() 
+    words = text.split()
+    ps = PorterStemmer()
+    
+    # Use a set for faster lookup
+    stop_words = set(stopwords.words('english'))
+    words = [ps.stem(word) for word in words if word not in stop_words]
+    return ' '.join(words)
+
+# Apply the cleaning 
+print("Cleaning data... please wait.")
+df['cleaned_text'] = df['comment_text'].apply(clean_text)
+
+# (II) EDA - Visualization
+# Since the dataset often has multiple labels (toxic, severe_toxic, etc.)
+# let's create a 'is_toxic' column if any label is 1
+label_cols = ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']
+df['is_toxic'] = df[label_cols].max(axis=1)
+
+plt.figure(figsize=(8, 5))
+sns.countplot(x='is_toxic', data=df, palette='viridis')
+plt.title('Toxic (1) vs Non-Toxic (0) Distribution')
+plt.xlabel('Safety Status')
+plt.ylabel('Count')
+
+
+plt.savefig('../reports/distribution.png')
+print("EDA Graph saved to reports/distribution.png")
+
+df.to_csv('../data/cleaned_toxic_comments.csv', index=False)
